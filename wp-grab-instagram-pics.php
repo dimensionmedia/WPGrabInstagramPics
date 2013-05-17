@@ -72,7 +72,8 @@ class WPGrabInstagramPics {
 		/**
 		 * Load needed include files
 		 */
-		// require( dirname( __FILE__ ) . '/includes/instagram.php' );
+
+		 // There used to be an external instagram lib, but no need now.
 
 		/**
 		 * Define globals
@@ -315,17 +316,13 @@ class WPGrabInstagramPics {
 	
 	    register_setting( 'wpgip-stats-group', 'wpgip-stats' );
 	    add_settings_section( 'section-stats', 'Stats', array( $this, 'options_stats_callback' ), 'wp-grab-instagram-pics-stats' );
-	    //add_settings_field( 'section-stats-maxid', 'Twitter max_id', array( $this, 'options_maxid_field_callback' ), 'wp-grab-instagram-pics-stats', 'section-stats' );
 	    add_settings_field( 'section-stats-last-grab', 'Last Grab', array( $this, 'options_lastgrab_field_callback' ), 'wp-grab-instagram-pics-stats', 'section-stats' );
 	    	
 	    register_setting( 'wpgip-options-group', 'wpgip-hashtag' );
-	    //register_setting( 'wpgip-options-group', 'wpgip-instagram-consumer-key' );
-	    //register_setting( 'wpgip-options-group', 'wpgip-instagram-consumer-secret' );
-	    //register_setting( 'wpgip-options-group', 'wpgip-setOAuthToken' );
-	    //register_setting( 'wpgip-options-group', 'wpgip-setOAuthTokenSecret' );
+	    register_setting( 'wpgip-options-group', 'wpgip-instagram-client-id' );
 	    add_settings_section( 'section-options', 'Options', array( $this, 'options_section_callback' ), 'wp-grab-instagram-pics-options' );
 	    add_settings_field( 'section-options-hashtag', 'Keyword', array( $this, 'options_hashtag_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
-	    //add_settings_field( 'section-options-instagram-consumer-key', 'Twitter Consumer Key', array( $this, 'options_instagram_consumer_key_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
+	    add_settings_field( 'section-options-instagram-client-id', 'Instagram Client ID', array( $this, 'options_instagram_client_id_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
 	    //add_settings_field( 'section-options-instagram-consumer-secret', 'Twitter Consumer Secret', array( $this, 'options_instagram_consumer_secret_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
 	    //add_settings_field( 'section-options-setOAuthToken', 'setOAuthToken', array( $this, 'options_setOAuthToken_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
 	    //add_settings_field( 'section-options-setOAuthTokenSecret', 'setOAuthTokenSecret', array( $this, 'options_setOAuthTokenSecret_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
@@ -362,26 +359,12 @@ class WPGrabInstagramPics {
 		    $setting = esc_attr( get_option( 'wpgip-hashtag' ) );
 		    echo "<input type='text' name='wpgip-hashtag' value='$setting' />";
 		}
-		
-		function options_instagram_consumer_key_field_callback() {
-		    $setting = esc_attr( get_option( 'wpgip-instagram-consumer-key' ) );
-		    echo "<input type='text' name='wpgip-instagram-consumer-key' value='$setting' />";
+				
+		function options_instagram_client_id_field_callback() {
+		    $setting = esc_attr( get_option( 'wpgip-instagram-client-id' ) );
+		    echo "<input type='text' name='wpgip-instagram-client-id' value='$setting' />";
 		}
 		
-		function options_instagram_consumer_secret_field_callback() {
-		    $setting = esc_attr( get_option( 'wpgip-instagram-consumer-secret' ) );
-		    echo "<input type='text' name='wpgip-instagram-consumer-secret' value='$setting' />";
-		}
-	
-		function options_setOAuthToken_field_callback() {
-		    $setting = esc_attr( get_option( 'wpgip-setOAuthToken' ) );
-		    echo "<input type='text' name='wpgip-setOAuthToken' value='$setting' />";
-		}
-		
-		function options_setOAuthTokenSecret_field_callback() {
-		    $setting = esc_attr( get_option( 'wpgip-setOAuthTokenSecret' ) );
-		    echo "<input type='text' name='wpgip-setOAuthTokenSecret' value='$setting' />";
-		}
 	
 	
 	/*--------------------------------------------*
@@ -439,148 +422,159 @@ class WPGrabInstagramPics {
         
         // let's grab the hashtag, henceforth known as the "tag"
 	    $tag = esc_attr( get_option( 'wpgip-hashtag' ) );
+	    // let's get the client id as well, assigned by instagram developer center
+	    $client_id = get_option( 'wpgip-instagram-client-id' );
 	    $msg = '';
 	    $image_counter = 0;
 	    
-	    // let's go grab some instagram posts!
-	    $response = $this->wpgip_fetch_data("https://api.instagram.com/v1/tags/".$tag."/media/recent?client_id=df2fe59b7c1846b1a8c95df7b4442f03");
+	    if ($tag && $client_id) { // need a tag to search, and a client id to proceed
 	    
-		// let's update the "last tried" field so someone knows when we last attempted to look
-		update_option( 'wpgip_instagram_last_grab', time() );
-           
-		if ($response) {
-				
-		    // Decode the response and build an array
+		    // let's go grab some instagram posts!
+		    $response = $this->wpgip_fetch_data("https://api.instagram.com/v1/tags/".$tag."/media/recent?client_id=".$client_id);
 		    
-		    foreach(json_decode($response)->data as $item){
-		
-			    $instagram_id = $item->id;
-		
-		        $title = (isset($item->caption))?mb_substr($item->caption->text,0,70,"utf8"):null;
-		        
-		        $link = $item->link;
-		        $created_time = $item->created_time;
-		        $standard_src = $item->images->standard_resolution->url; //Caches standard res img path to variable $src
-		        $thumbnail_src = $item->images->thumbnail->url; //Caches standard res img path to variable $src
-		
-		        //get caption / username
-		        $caption_username = (isset($item->caption->from->username))?$item->caption->from->username:null; 
-		        $caption_username_id = (isset($item->caption->from->id))?$item->caption->from->id:null; 
-		
-		        //Location coords seemed empty in the results but you would need to check them as mostly be undefined
-		        $lat = (isset($item->data->location->latitude))?$item->data->location->latitude:null; // Caches latitude as $lat
-		        $lon = (isset($item->data->location->longtitude))?$item->data->location->longtitude:null; // Caches longitude as $lon
-		
-		        $images[] = array(
-			        "instagram_id" => $instagram_id,
-			        "title" => htmlspecialchars($title),
-			        "link" => htmlspecialchars($link),
-			        "created_time" => htmlspecialchars($created_time),
-			        "caption_username" => htmlspecialchars($caption_username),
-			        "caption_username_id" => htmlspecialchars($caption_username_id),        
-			        "standard_src" => htmlspecialchars($standard_src),
-			        "thumbnail_src" => htmlspecialchars($thumbnail_src),        
-			        "lat" => htmlspecialchars($lat),
-			        "lon" => htmlspecialchars($lon) // Consolidates variables to an array
-		        );
-		    }
-		       
-		    // First we grab any current images to ensure we don't add duplicates
-		    
-		    $image_id_array = array();
-		    
-			$attachments = get_posts( array(
-				'post_type' => 'attachment',
-				'post_mime_type' => 'image',
-				'posts_per_page' => -1,
-				'post_parent' => 0
-			) );
-		
-			if ( $attachments ) {
-				foreach ( $attachments as $attachment ) {
-					$post_meta = get_post_meta ( $attachment->ID );
-					$current_images[] = array ( 'post_data' => $attachment, 'post_meta' => $post_meta );
-					$image_id_array[] = $post_meta['cz_instagram_image_id'][0]; // makes finding duplicate items easier, but should be a better way!
-				}
-				
-			}
-		
-			// Ok, now loop through the images grabbed and save into WP anything that we don't have
-				
-			foreach ($images as $image) {
+			// let's update the "last tried" field so someone knows when we last attempted to look
+			update_option( 'wpgip_instagram_last_grab', time() );
+	           
+			if ($response) {
 					
-				if ( !in_array($image['instagram_id'], $image_id_array) ) { 
-					
-					// image doesn't exist - let's upload and add to WP media lib
-					
-					$url = $image['standard_src'];
-					$tmp = download_url( $url );
-					$file_array = array(
-					    'name' => basename( $url ),
-					    'tmp_name' => $tmp
-					);
-								
-					// Check for download errors
-					if ( is_wp_error( $tmp ) ) {
-					    @unlink( $file_array[ 'tmp_name' ] );
-						print_r ($tmp); echo "test";
-					}
-											
-					$id = $this->wpgip_media_handle_sideload( $file_array, 0 );
-					
-					// Check for handle sideload errors.
-					if ( is_wp_error( $id ) ) {
-						print_r ($id); echo "test";
-					    @unlink( $file_array['tmp_name'] );
-					    return $id;
-					}
-					
-					$attachment_url = wp_get_attachment_url( $id );
-					
-					// add image title (which was the instagram's caption)
-					
-					$post_content = '<a href="'.$image['link'].'">Taken on ' . date('F jS, Y - g:ia', $image['created_time']);
-					
-					if ( $image['caption_username'] ) {
-						$post_content .= ' by '.$image['caption_username'].' ';	
-					} 
-					
-					$post_content .= '</a>.';
-					
-					$data = array(
-						'ID' => $id,
-					    'post_excerpt' => $image['title'],
-					    'post_content' => $post_content,
-					    'post_title' => $image['title']
-					);
-					
-					wp_update_post( $data );
-		
-					// add image metadata
-		
-					add_post_meta($id, 'cz_instagram_image_type', 'cz_gallery_image', true);
-					add_post_meta($id, 'cz_instagram_image_id', $image['instagram_id'], true);
-					if ( $image['lat'] ) { add_post_meta($id, 'cz_instagram_image_lat', $image['lat'], true); }			
-					if ( $image['lat'] ) { add_post_meta($id, 'cz_instagram_image_lat', $image['lat'], true); }
-					if ( $image['link'] ) { add_post_meta($id, 'cz_instagram_image_link', $image['link'], true); }
-					if ( $image['caption_username'] ) { add_post_meta($id, 'cz_instagram_image_caption_username', $image['caption_username'], true); }
-					if ( $image['caption_username_id'] ) { add_post_meta($id, 'cz_instagram_image_caption_username_id', $image['caption_username_id'], true); }
-					
-					// ok, add one to the counter
-					
-					$image_counter++;
-					
-		//			print_r($data);
-		
-				}
-				
-			}
+			    // Decode the response and build an array
+			    
+			    foreach(json_decode($response)->data as $item){
 			
-		
-		    $msg = "$image_counter images pulled from Instagram.";
-		    
-		}
+				    $instagram_id = $item->id;
+			
+			        $title = (isset($item->caption))?mb_substr($item->caption->text,0,70,"utf8"):null;
+			        
+			        $link = $item->link;
+			        $created_time = $item->created_time;
+			        $standard_src = $item->images->standard_resolution->url; //Caches standard res img path to variable $src
+			        $thumbnail_src = $item->images->thumbnail->url; //Caches standard res img path to variable $src
+			
+			        //get caption / username
+			        $caption_username = (isset($item->caption->from->username))?$item->caption->from->username:null; 
+			        $caption_username_id = (isset($item->caption->from->id))?$item->caption->from->id:null; 
+			
+			        //Location coords seemed empty in the results but you would need to check them as mostly be undefined
+			        $lat = (isset($item->data->location->latitude))?$item->data->location->latitude:null; // Caches latitude as $lat
+			        $lon = (isset($item->data->location->longtitude))?$item->data->location->longtitude:null; // Caches longitude as $lon
+			
+			        $images[] = array(
+				        "instagram_id" => $instagram_id,
+				        "title" => htmlspecialchars($title),
+				        "link" => htmlspecialchars($link),
+				        "created_time" => htmlspecialchars($created_time),
+				        "caption_username" => htmlspecialchars($caption_username),
+				        "caption_username_id" => htmlspecialchars($caption_username_id),        
+				        "standard_src" => htmlspecialchars($standard_src),
+				        "thumbnail_src" => htmlspecialchars($thumbnail_src),        
+				        "lat" => htmlspecialchars($lat),
+				        "lon" => htmlspecialchars($lon) // Consolidates variables to an array
+			        );
+			    }
+			       
+			    // First we grab any current images to ensure we don't add duplicates
+			    
+			    $image_id_array = array();
+			    
+				$attachments = get_posts( array(
+					'post_type' => 'attachment',
+					'post_mime_type' => 'image',
+					'posts_per_page' => -1,
+					'post_parent' => 0
+				) );
+			
+				if ( $attachments ) {
+					foreach ( $attachments as $attachment ) {
+						$post_meta = get_post_meta ( $attachment->ID );
+						$current_images[] = array ( 'post_data' => $attachment, 'post_meta' => $post_meta );
+						$image_id_array[] = $post_meta['cz_instagram_image_id'][0]; // makes finding duplicate items easier, but should be a better way!
+					}
+					
+				}
+			
+				// Ok, now loop through the images grabbed and save into WP anything that we don't have
+					
+				foreach ($images as $image) {
+						
+					if ( !in_array($image['instagram_id'], $image_id_array) ) { 
+						
+						// image doesn't exist - let's upload and add to WP media lib
+						
+						$url = $image['standard_src'];
+						$tmp = download_url( $url );
+						$file_array = array(
+						    'name' => basename( $url ),
+						    'tmp_name' => $tmp
+						);
+									
+						// Check for download errors
+						if ( is_wp_error( $tmp ) ) {
+						    @unlink( $file_array[ 'tmp_name' ] );
+							print_r ($tmp); echo "test";
+						}
+												
+						$id = $this->wpgip_media_handle_sideload( $file_array, 0 );
+						
+						// Check for handle sideload errors.
+						if ( is_wp_error( $id ) ) {
+							print_r ($id); echo "test";
+						    @unlink( $file_array['tmp_name'] );
+						    return $id;
+						}
+						
+						$attachment_url = wp_get_attachment_url( $id );
+						
+						// add image title (which was the instagram's caption)
+						
+						$post_content = '<a href="'.$image['link'].'">Taken on ' . date('F jS, Y - g:ia', $image['created_time']);
+						
+						if ( $image['caption_username'] ) {
+							$post_content .= ' by '.$image['caption_username'].' ';	
+						} 
+						
+						$post_content .= '</a>.';
+						
+						$data = array(
+							'ID' => $id,
+						    'post_excerpt' => $image['title'],
+						    'post_content' => $post_content,
+						    'post_title' => $image['title']
+						);
+						
+						wp_update_post( $data );
+			
+						// add image metadata
+			
+						add_post_meta($id, 'cz_instagram_image_type', 'cz_gallery_image', true);
+						add_post_meta($id, 'cz_instagram_image_id', $image['instagram_id'], true);
+						if ( $image['lat'] ) { add_post_meta($id, 'cz_instagram_image_lat', $image['lat'], true); }			
+						if ( $image['lat'] ) { add_post_meta($id, 'cz_instagram_image_lat', $image['lat'], true); }
+						if ( $image['link'] ) { add_post_meta($id, 'cz_instagram_image_link', $image['link'], true); }
+						if ( $image['caption_username'] ) { add_post_meta($id, 'cz_instagram_image_caption_username', $image['caption_username'], true); }
+						if ( $image['caption_username_id'] ) { add_post_meta($id, 'cz_instagram_image_caption_username_id', $image['caption_username_id'], true); }
+						
+						// ok, add one to the counter
+						
+						$image_counter++;
+									
+					}
+					
+				}
+				
+			
+			    $msg = "$image_counter images pulled from Instagram.";
+			    
+			}
 
+		} else { // if we don't have a tag and client id
+		
+			if ( !$tag ) {
+				$msg = "missing-tag";
+			} else if ( !$client_id ) {
+				$msg = "missing-client-id";
+			}
+					
+		}
 
 		$url = add_query_arg( 'msg', $msg, urldecode( $_POST['_wp_http_referer'] ) );
 
@@ -604,6 +598,14 @@ class WPGrabInstagramPics {
 
         if ( 'settingsreset' === $_GET['msg'] )
             $this->msg_text = 'Settings Have Been Reset';
+
+        if ( 'missing-tag' === $_GET['msg'] )
+            $this->msg_text = 'A tag/keyword to search for is required.';
+
+        if ( 'missing-client-id' === $_GET['msg'] )
+            $this->msg_text = 'You need a "client id" provided by Instagram.';
+            
+            
 
         if ( 'true' === $_GET['settings-updated'] )
             $this->msg_text = 'Options Have Been Updated';
