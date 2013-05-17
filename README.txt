@@ -19,10 +19,14 @@ For the moment, nothing.
 
 == ToDos ==
 
-= 0.2 =
-* Make Instagram "key" a setting, and not hardcoded (duh).
+= 0.3 =
+* Improve error handling, response messaging.
 
 == Changelog ==
+
+= 0.2 =
+* Code cleanup.
+* Instagram Client ID now a setting.
 
 = 0.1 =
 * Basic bare-bones plugin.
