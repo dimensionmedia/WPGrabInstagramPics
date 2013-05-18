@@ -430,17 +430,17 @@ class WPGrabInstagramPics {
 	    if ($tag && $client_id) { // need a tag to search, and a client id to proceed
 	    
 		    // let's go grab some instagram posts!
-		    $response = $this->wpgip_fetch_data("https://api.instagram.com/v1/tags/".$tag."/media/recent?client_id=".$client_id);
+   		    $response = wp_remote_get("https://api.instagram.com/v1/tags/".$tag."/media/recent?client_id=".$client_id);
 		    
 			// let's update the "last tried" field so someone knows when we last attempted to look
 			update_option( 'wpgip_instagram_last_grab', time() );
 	           
-			if ($response) {
+			if( !is_wp_error( $response ) ) {
 					
 			    // Decode the response and build an array
 			    
-			    foreach(json_decode($response)->data as $item){
-			
+			    foreach(json_decode($response['body'])->data as $item){
+			    			
 				    $instagram_id = $item->id;
 			
 			        $title = (isset($item->caption))?mb_substr($item->caption->text,0,70,"utf8"):null;
@@ -672,18 +672,7 @@ class WPGrabInstagramPics {
 	        return $id;
 	}	
 	
-	/*
-	 * Don't judge me
-	 */	
-	public function wpgip_fetch_data($url) {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-	    $result = curl_exec($ch);
-	    curl_close($ch); 
-	    return $result;
-	}
+
 	
 	
 	
