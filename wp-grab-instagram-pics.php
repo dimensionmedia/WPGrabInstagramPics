@@ -388,7 +388,7 @@ class WPGrabInstagramPics {
         
        // ok, let's get back to where we were, most likely the settings page
        
-		$msg = "settingsreset";       
+		$msg = "settings-reset";       
        
 		$url = add_query_arg( 'msg', $msg, urldecode( $_POST['_wp_http_referer'] ) );
 		
@@ -580,36 +580,28 @@ class WPGrabInstagramPics {
 	} // end wpgip_grab_instagram_posts()
 	
 		
-	/*
-	 * Simple render message script
+	/**
+	 * Render Messages.
+	 *
+	 * @since 0.1
 	 */
-    public function render_msg()
-    {
+    public function render_msg() {
+		$text = false;
     
-        if ( ! isset ( $_GET['msg'] ) && ! isset ( $_GET['settings-updated'] ) )
-            return;
+		if ( ! isset( $_GET['msg'] ) )
+			return;
 
-        $text = FALSE;
+		if ( 'settings-reset' === $_GET['msg'] )
+			$text = __( 'Settings have been reset.' );
 
-        if ( 'settingsreset' === $_GET['msg'] )
-            $this->msg_text = 'Settings Have Been Reset';
+		if ( 'missing-tag' === $_GET['msg'] )
+			$text = _( 'A tag/keyword to search for is required.' );
 
-        if ( 'missing-tag' === $_GET['msg'] )
-            $this->msg_text = 'A tag/keyword to search for is required.';
-
-        if ( 'missing-client-id' === $_GET['msg'] )
-            $this->msg_text = 'You need a "client id" provided by Instagram.';
-            
-            
-
-        if ( 'true' === $_GET['settings-updated'] )
-            $this->msg_text = 'Options Have Been Updated';
+		if ( 'missing-client-id' === $_GET['msg'] )
+			$text = __( 'You need a "client id" provided by Instagram.' );;
                         
-        if ( $this->msg_text ) {
-        
-	        echo '<div class="updated"><p>' . $this->msg_text . '</p></div>';
-            
-        }
+		if ( $text )        
+			echo '<div class="updated"><p>' . $text . '</p></div>';
     }
 	
 	
