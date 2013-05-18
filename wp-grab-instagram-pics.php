@@ -27,13 +27,7 @@ License:
 */
 
 /**
- * TODO: 
- *
- * Rename this class to a proper name for your plugin. Give a proper description of
- * the plugin, it's purpose, and any dependencies it has.
- *
- * Use PHPDoc directives if you wish to be able to document the code using a documentation
- * generator.
+ * This is to be considered a "bare bones" plugin, to be incorporated into other larger plugins and themes.
  *
  * @version	1.0
  */
