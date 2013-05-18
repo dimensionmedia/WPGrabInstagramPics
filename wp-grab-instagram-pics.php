@@ -421,19 +421,20 @@ class WPGrabInstagramPics {
 	    $msg = '';
 	    $image_counter = 0;
 	    
-	    if ($tag && $client_id) { // need a tag to search, and a client id to proceed
+	    if ( $tag && $client_id ) { // need a tag to search, and a client id to proceed
 	    
 		    // let's go grab some instagram posts!
-   		    $response = wp_remote_get("https://api.instagram.com/v1/tags/".$tag."/media/recent?client_id=".$client_id);
+   		    $response = wp_remote_get( 'https://api.instagram.com/v1/tags/' . $tag . '/media/recent?client_id=' . $client_id, array( 'sslverify' => false ) );
 		    
 			// let's update the "last tried" field so someone knows when we last attempted to look
 			update_option( 'wpgip_instagram_last_grab', time() );
 	           
-			if( !is_wp_error( $response ) ) {
+			if ( 200 === wp_remote_retrieve_response_code( $response ) ) {
 					
 			    // Decode the response and build an array
+			    $body = json_decode( wp_remote_retrieve_body( $response ) );
 			    
-			    foreach(json_decode($response['body'])->data as $item){
+			    foreach ( $body->data as $item ) {
 			    			
 				    $instagram_id = $item->id;
 			
@@ -665,30 +666,6 @@ class WPGrabInstagramPics {
 	
 	        return $id;
 	}	
-	
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-
 } // end class
 
 
