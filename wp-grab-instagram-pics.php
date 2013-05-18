@@ -237,70 +237,70 @@ class WPGrabInstagramPics {
 	
 	/**
 	 * Renders the settings page for this plugin.
+	 *
+	 * @since 0.1
 	 */
-
 	public function wpgip_settings_page() {
-	
 		$redirect = urlencode( remove_query_arg( 'msg', $_SERVER['REQUEST_URI'] ) );
-        $redirect = urlencode( $_SERVER['REQUEST_URI'] );
+		$redirect = urlencode( $_SERVER['REQUEST_URI'] );
         
-        $action_name = "wpgip_clear_settings";
-        $nonce_name = "wp-grab-instagram-pics";
-	
-	    echo '
-	    <div class="wrap">
-	        <div id="icon-options-general" class="icon32"><br /></div>
-	        <h2>'.__("Grab Instagram Pics Settings").'</h2>
-	        <br />'; ?>
+		$action_name = 'wpgip_clear_settings';
+		$nonce_name = 'wp-grab-instagram-pics';
+
+		?>
+		<div class="wrap">
+			<?php screen_icon( 'options-general' ); ?>
+			<h2><?php _e( 'Grab Instagram Pics Settings' ); ?></h2>
+			<?php settings_errors(); ?>
 	        
 	        <?php /* $max_id = esc_attr( get_option( 'wpgip_instagram_gallery_max_id' ) ); ?>
 	        <p>Currently, max_id of instagram is <?php echo $max_id; ?></p> */ ?>
 	        
-	        <form action="<?php echo admin_url( 'admin-post.php' ); ?>" method="POST">
-	            <input type="hidden" name="action" value="<?php echo $action_name; ?>">
-	            <?php wp_nonce_field( $action_name, $nonce_name . '_nonce', FALSE ); ?>
-	            <input type="hidden" name="_wp_http_referer" value="<?php echo $redirect; ?>">
-	            <?php do_settings_sections( 'wp-grab-instagram-pics-stats' ); ?>
-	            <?php submit_button( 'Clear All Stats' ); ?>
-	        </form>
+			<form action="<?php echo admin_url( 'admin-post.php' ); ?>" method="POST">
+				<input type="hidden" name="action" value="<?php echo $action_name; ?>">
+				<?php wp_nonce_field( $action_name, $nonce_name . '_nonce', FALSE ); ?>
+				<input type="hidden" name="_wp_http_referer" value="<?php echo $redirect; ?>">
+				<?php do_settings_sections( 'wp-grab-instagram-pics-stats' ); ?>
+				<?php submit_button( 'Clear All Stats' ); ?>
+			</form>
 	        
 
-	        <form action="options.php" method="POST">
-	            <?php settings_fields( 'wpgip-options-group' ); ?>
-	            <?php do_settings_sections( 'wp-grab-instagram-pics-options' ); ?>
-	            <?php submit_button(); ?>
-	        <?php echo '</form>
-	    </div>';
+			<form action="options.php" method="POST">
+				<?php settings_fields( 'wpgip-options-group' ); ?>
+				<?php do_settings_sections( 'wp-grab-instagram-pics-options' ); ?>
+				<?php submit_button(); ?>
+			</form>
+		</div>
+		<?php
 	}
 	
 	/**
 	 * Renders the grab page for this plugin.
-	 */
-	 
-	public function wpgip_grab_page() {
-	
+	 *
+	 * @since 0.1
+	 */	 
+	public function wpgip_grab_page() {	
 		$redirect = urlencode( remove_query_arg( 'msg', $_SERVER['REQUEST_URI'] ) );
-        $redirect = urlencode( $_SERVER['REQUEST_URI'] );
+		$redirect = urlencode( $_SERVER['REQUEST_URI'] );
         
-        $action_name = "grab_tweets";
-        $nonce_name = "wp-grab-instagram-pics";
+		$action_name = 'grab_tweets';
+		$nonce_name = 'wp-grab-instagram-pics';
 	
-	    echo '
-	    <div class="wrap">
-	        <div id="icon-edit-pages" class="icon32"><br /></div>
-	        <h2>'.__("Grab InstaGram Posts").'</h2>
-	        <br />'; ?>
-	        <form action="<?php echo admin_url( 'admin-post.php' ); ?>" method="POST">
-            <input type="hidden" name="action" value="<?php echo $action_name; ?>">
-            <?php wp_nonce_field( $action_name, $nonce_name . '_nonce', FALSE ); ?>
-            <input type="hidden" name="_wp_http_referer" value="<?php echo $redirect; ?>">
+		?>
+		<div class="wrap">
+			<?php screen_icon( 'edit-pages' ); ?>
+			<h2><?php _e( 'Grap Instagram Posts' ); ?></h2>
 
-            <?php submit_button( 'Grab Posts' ); ?>
-        </form>
-        <?php echo '
-	    </div>';
+			<form action="<?php echo admin_url( 'admin-post.php' ); ?>" method="POST">
+				<input type="hidden" name="action" value="<?php echo $action_name; ?>">
+				<?php wp_nonce_field( $action_name, $nonce_name . '_nonce', FALSE ); ?>
+				<input type="hidden" name="_wp_http_referer" value="<?php echo $redirect; ?>">
+				<?php submit_button( 'Grab Posts' ); ?>
+			</form>
+		</div>
+		<?php
 	}
-	 
+
 
 	/**
 	 * This inits the sections and fields in the settings screens
