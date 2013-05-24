@@ -98,14 +98,25 @@ class WPGrabInstagramPics {
 		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
 
 	    /*
-	     * Here's where we define the custom functionality for this plugin.
+	     * Here's where we define the custom functionality
 	     */     
 	     
-		add_action( "admin_post_grab_tweets", array ( $this, 'wpgip_grab_instagram_posts' ) );	
+		add_action( "admin_post_grab_instagrams", array ( $this, 'wpgip_grab_instagram_posts' ) );	
 		add_action( "admin_post_wpgip_clear_settings", array ( $this, 'wpgip_clear_settings' ) );	
         add_action( "admin_notices", array ( $this, 'render_msg' ) );
+        add_action( "init", array ( $this, 'wpgip_register_cpt' ) );
+        add_action( "init", array ( $this, 'wpgip_register_tax' ) );
+
+
+
 
 	} // end constructor
+	
+	
+	
+	
+     
+
 
 	/**
 	 * Fired when the plugin is activated.
@@ -283,7 +294,7 @@ class WPGrabInstagramPics {
 		$redirect = urlencode( remove_query_arg( 'msg', $_SERVER['REQUEST_URI'] ) );
 		$redirect = urlencode( $_SERVER['REQUEST_URI'] );
         
-		$action_name = 'grab_tweets';
+		$action_name = 'grab_instagrams';
 		$nonce_name = 'wp-grab-instagram-pics';
 	
 		?>
@@ -317,9 +328,7 @@ class WPGrabInstagramPics {
 	    add_settings_section( 'section-options', 'Options', array( $this, 'options_section_callback' ), 'wp-grab-instagram-pics-options' );
 	    add_settings_field( 'section-options-hashtag', 'Keyword', array( $this, 'options_hashtag_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
 	    add_settings_field( 'section-options-instagram-client-id', 'Instagram Client ID', array( $this, 'options_instagram_client_id_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
-	    //add_settings_field( 'section-options-instagram-consumer-secret', 'Twitter Consumer Secret', array( $this, 'options_instagram_consumer_secret_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
-	    //add_settings_field( 'section-options-setOAuthToken', 'setOAuthToken', array( $this, 'options_setOAuthToken_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
-	    //add_settings_field( 'section-options-setOAuthTokenSecret', 'setOAuthTokenSecret', array( $this, 'options_setOAuthTokenSecret_field_callback' ), 'wp-grab-instagram-pics-options', 'section-options' );
+
 	    
 	} // end wpgip_admin_init
 
@@ -365,6 +374,246 @@ class WPGrabInstagramPics {
 	 * Core Functions
 	 *---------------------------------------------*/
 
+
+	 
+	 
+	/*
+	 * Register CTP
+	 */
+	 
+	public function wpgip_register_cpt() {
+		
+	    $labels = array( 
+	        'name' => _x( 'Instagram Posts', 'faq' ),
+	        'singular_name' => _x( 'Instagram Post', 'faq' ),
+	        'add_new' => _x( 'Add New', 'faq' ),
+	        'add_new_item' => _x( 'Add New Instagram Post', 'faq' ),
+	        'edit_item' => _x( 'Edit Instagram Post', 'faq' ),
+	        'new_item' => _x( 'New Instagram Post', 'faq' ),
+	        'view_item' => _x( 'View Instagram Post', 'faq' ),
+	        'search_items' => _x( 'Search Instagram Posts', 'faq' ),
+	        'not_found' => _x( 'No Tweets found', 'faq' ),
+	        'not_found_in_trash' => _x( 'No Instagram Posts found in Trash', 'faq' ),
+	        'parent_item_colon' => _x( 'Parent Instagram Post:', 'faq' ),
+	        'menu_name' => _x( 'Instagram Posts', 'faq' ),
+	    );
+	    
+	    //set up the rewrite rules
+	    $rewrite = array(
+	        'slug' => 'instagram-posts'
+	    );
+	
+	    $args = array( 
+	        'labels' => $labels,
+	        'hierarchical' => false,
+	        'description' => 'Stored posts from Instagram.',
+	        'supports' => array( 'title', 'page-attributes', 'editor', 'thumbnail' ),        
+	        'public' => true,
+	        'show_ui' => true,
+	        'show_in_menu' => true,
+	        'show_in_nav_menus' => false,
+	        'publicly_queryable' => true,
+	        'exclude_from_search' => true,
+	        'has_archive' => false,
+	        'query_var' => true,
+	        'can_export' => true,
+	        'rewrite' => $rewrite,
+	        'capability_type' => 'post',
+	        'register_meta_box_cb' => array ( $this, 'wpgip_add_instagram_posts_metabox' )
+	    );
+	
+	    register_post_type( 'wpgip_instagrams', $args );
+    
+	}
+	
+	/*
+	 * Add Meta Box For This Post Type
+	 */
+	
+	public function wpgip_add_instagram_posts_metabox() {
+		
+		add_meta_box('wpgip_instagram_post_information', 'Instagram Post Information', array ( $this, 'wpgip_instagram_posts_meta' ), 'wpgip_instagrams', 'normal', 'default');
+		
+	}
+
+	/*
+	 * Add Fields For Meta Box
+	 */
+	
+	public function wpgip_instagram_posts_meta() {
+		global $post;
+		
+		// Noncename needed to verify where the data originated
+		echo '<input type="hidden" name="instagrampostmeta_noncename" id="instagrampostmeta_noncename" value="' . wp_create_nonce( plugin_basename(__FILE__) ) . '" />';
+		
+		$wpgip_ip_image_id = get_post_meta($post->ID, 'wpgip_ip_image_id', true);		
+		$wpgip_ip_lat = get_post_meta($post->ID, 'wpgip_ip_lat', true);
+		$wpgip_ip_long = get_post_meta($post->ID, 'wpgip_ip_long', true);
+		$wpgip_ip_url = get_post_meta($post->ID, 'wpgip_ip_url', true);
+		$wpgip_ip_username = get_post_meta($post->ID, 'wpgip_ip_username', true);
+		$wpgip_ip_username_id = get_post_meta($post->ID, 'wpgip_ip_username_id', true);
+		$wpgip_ip_datetime = get_post_meta($post->ID, 'wpgip_ip_datetime', true);
+				
+		// Echo out the fields
+		echo '<label>Image ID:</label> <input type="text" name="wpgip_ip_image_id" value="' . $wpgip_ip_image_id  . '" class="widefat" />';
+		echo '<label>Lat:</label> <input type="text" name="wpgip_ip_lat" value="' . $wpgip_ip_lat  . '" class="widefat" />';
+		echo '<label>Long:</label> <input type="text" name="wpgip_ip_long" value="' . $wpgip_ip_long  . '" class="widefat" />';
+		echo '<label>URL:</label> <input type="text" name="wpgip_ip_url" value="' . $wpgip_ip_url  . '" class="widefat" />';
+		echo '<label>Username:</label> <input type="text" name="wpgip_ip_username" value="' . $wpgip_ip_username  . '" class="widefat" />';		
+		echo '<label>Username ID:</label> <input type="text" name="wpgip_ip_username_id" value="' . $wpgip_ip_username_id  . '" class="widefat" />';
+		echo '<label>Datetime:</label> <input type="text" name="wpgip_ip_datetime" value="' . $wpgip_ip_datetime  . '" class="widefat" />';
+	}
+
+
+	
+	/*
+	 * Saving Metabox Data
+	 */
+	
+	public function wpgip_save_events_meta($post_id, $post) {
+	
+		if ( isset( $_POST['tweetmeta_noncename'] ) ) {
+		
+			// verify this came from the our screen and with proper authorization,
+			// because save_post can be triggered at other times
+					
+			if ( !wp_verify_nonce( $_POST['tweetmeta_noncename'], plugin_basename(__FILE__) )) {
+				return $post->ID;
+			}
+		
+			// Is the user allowed to edit the post or page?
+			
+			if ( !current_user_can( 'edit_post', $post->ID ))
+				return $post->ID;
+		
+			// OK, we're authenticated: we need to find and save the data
+			// We'll put it into an array to make it easier to loop though.
+			
+			$tweets_meta['wpgip_ip_image_id'] = $_POST['wpgip_ip_image_id'];
+			$tweets_meta['wpgip_ip_lat'] = $_POST['wpgip_ip_lat'];
+			$tweets_meta['wpgip_ip_long'] = $_POST['wpgip_ip_long'];
+			$tweets_meta['wpgip_ip_url'] = $_POST['wpgip_ip_url'];
+			$tweets_meta['wpgip_ip_username'] = $_POST['wpgip_ip_username'];
+			$tweets_meta['wpgip_ip_username_id'] = $_POST['wpgip_ip_username_id'];
+			$tweets_meta['wpgip_ip_datetime'] = $_POST['wpgip_ip_datetime'];
+			
+			// Add values of $events_meta as custom fields
+			
+			foreach ($tweets_meta as $key => $value) { // Cycle through the $tweets_meta array
+			
+				if( $post->post_type == 'revision' ) return; // Don't store custom data twice
+				
+				$value = implode(',', (array)$value); // If $value is an array, make it a CSV (unlikely)
+				
+				if(get_post_meta($post->ID, $key, FALSE)) { // If the custom field already has a value
+					update_post_meta($post->ID, $key, $value);
+				} else { // If the custom field doesn't have a value
+					add_post_meta($post->ID, $key, $value);
+				}
+				
+				if(!$value) delete_post_meta($post->ID, $key); // Delete if blank
+			}
+		
+		}
+	
+	}
+	
+	
+	/*
+	 * Register Tax Term
+	 *
+	 * Note: media_categories places taxonomy for attachments - it was the idea i was running with
+	 * but no longer being used primarily anymore
+	 *
+	 */
+	 
+	public function wpgip_register_tax() {
+	
+
+		// Add new taxonomy, make it hierarchical (like categories)
+		$labels = array(
+		    'name' => _x( 'Instagram Types', 'taxonomy general name' ),
+		    'singular_name' => _x( 'Instagram Types', 'taxonomy singular name' ),
+		    'search_items' =>  __( 'Search Instagram Types' ),
+		    'all_items' => __( 'All Instagram Types' ),
+		    'parent_item' => __( 'Parent Instagram Type' ),
+		    'parent_item_colon' => __( 'Parent Instagram Type:' ),
+		    'edit_item' => __( 'Edit Instagram Type' ), 
+		    'update_item' => __( 'Update Instagram Type' ),
+		    'add_new_item' => __( 'Add New Instagram Type' ),
+		    'new_item_name' => __( 'New Instagram Type Name' ),
+		    'menu_name' => __( 'Instagram Types' ),
+		); 	
+		
+		register_taxonomy('wpgip_instagram_types',array('wpgip_instagrams'), array(
+		    'hierarchical' => true,
+		    'labels' => $labels,
+		    'show_ui' => true,
+		    'query_var' => true
+		));
+		
+		// add this tax if it doesn't exist
+		
+		if ( !taxonomy_exists('wpgip_media_categories') ) {
+	
+			register_taxonomy('wpgip_media_categories', 'attachment', array(
+				// Hierarchical taxonomy (like categories)
+				'hierarchical' => true,
+				// This array of options controls the labels displayed in the WordPress Admin UI
+				'labels' => array(
+					'name' => _x( 'Media Category', 'taxonomy general name' ),
+					'singular_name' => _x( 'Media Category', 'taxonomy singular name' ),
+					'search_items' =>  __( 'Search Media Categories' ),
+					'all_items' => __( 'All Media Categories' ),
+					'parent_item' => __( 'Parent Media Category' ),
+					'parent_item_colon' => __( 'Parent Media Category:' ),
+					'edit_item' => __( 'Edit Media Category' ),
+					'update_item' => __( 'Update Media Category' ),
+					'add_new_item' => __( 'Add New Media Category' ),
+					'new_item_name' => __( 'New Media Category Name' ),
+					'menu_name' => __( 'Media Categories' ),
+				),
+				// Control the slugs used for this taxonomy
+				'rewrite' => array(
+					'slug' => 'media-categories', // This controls the base slug that will display before each term
+					'with_front' => false, // Don't display the category base before "/locations/"
+					'hierarchical' => true // This will allow URL's like "/locations/boston/cambridge/"
+				),
+			));
+	
+		}
+
+		// add the media category option, if it exits	
+
+		if ( taxonomy_exists('wpgip_media_categories') ) {
+	
+			$term = term_exists('Instagram', 'wpgip_media_categories');
+			
+			if ($term !== 0 && $term !== null) {
+			
+				// this exists, do nothing
+				
+			} else {
+
+				$parent_term_id = 0; // there's no parent (yet)
+				
+				wp_insert_term(
+				  'Instagram', // the term 
+				  'wpgip_media_categories', // the taxonomy
+				  array(
+				    'description'=> 'Posts from the Instagram social network.',
+				    'slug' => 'instagram',
+				    'parent'=> $parent_term_id
+				  )
+				);
+				
+			} // if term isn't null
+			
+		} // if tax exists
+		
+	} // wpgip_register_tax
+	
+	
 	/*
 	 * This handles what happens when the 'clear all settings' button is pushed on the settings page.
 	 * This attempts to remove and/or reset values.
@@ -409,144 +658,174 @@ class WPGrabInstagramPics {
 	public function wpgip_grab_instagram_posts() {
 
 		// check nonce
-        if ( ! wp_verify_nonce( $_POST[ 'wp-grab-instagram-pics' . '_nonce' ], 'grab_tweets' ) )
+        if ( ! wp_verify_nonce( $_POST[ 'wp-grab-instagram-pics' . '_nonce' ], 'grab_instagrams' ) )
             die( 'Invalid nonce.' . var_export( $_POST, true ) );
             
         // proceeding forward - woot!
         
         // let's grab the hashtag, henceforth known as the "tag"
 	    $tag = esc_attr( get_option( 'wpgip-hashtag' ) );
+	    
 	    // let's get the client id as well, assigned by instagram developer center
 	    $client_id = get_option( 'wpgip-instagram-client-id' );
+	    
+	    // setup a few variables and arrays
 	    $msg = '';
+	    $new_instagrams = array();
 	    $image_counter = 0;
 	    
 	    if ( $tag && $client_id ) { // need a tag to search, and a client id to proceed
 	    
 		    // let's go grab some instagram posts!
    		    $response = wp_remote_get( 'https://api.instagram.com/v1/tags/' . $tag . '/media/recent?client_id=' . $client_id, array( 'sslverify' => false ) );
-		    
-			// let's update the "last tried" field so someone knows when we last attempted to look
-			update_option( 'wpgip_instagram_last_grab', time() );
-	           
+		    	           
 			if ( 200 === wp_remote_retrieve_response_code( $response ) ) {
+				
+				// let's update the "last tried" field so someone knows when we last attempted to look
+				update_option( 'wpgip_instagram_last_grab', time() );
 					
 			    // Decode the response and build an array
 			    $body = json_decode( wp_remote_retrieve_body( $response ) );
 			    
-			    foreach ( $body->data as $item ) {
-			    			
-				    $instagram_id = $item->id;
-			
-			        $title = (isset($item->caption))?mb_substr($item->caption->text,0,70,"utf8"):null;
-			        
-			        $link = $item->link;
-			        $created_time = $item->created_time;
-			        $standard_src = $item->images->standard_resolution->url; //Caches standard res img path to variable $src
-			        $thumbnail_src = $item->images->thumbnail->url; //Caches standard res img path to variable $src
-			
-			        //get caption / username
-			        $caption_username = (isset($item->caption->from->username))?$item->caption->from->username:null; 
-			        $caption_username_id = (isset($item->caption->from->id))?$item->caption->from->id:null; 
-			
-			        //Location coords seemed empty in the results but you would need to check them as mostly be undefined
-			        $lat = (isset($item->data->location->latitude))?$item->data->location->latitude:null; // Caches latitude as $lat
-			        $lon = (isset($item->data->location->longtitude))?$item->data->location->longtitude:null; // Caches longitude as $lon
-			
-			        $images[] = array(
-				        "instagram_id" => $instagram_id,
-				        "title" => htmlspecialchars($title),
-				        "link" => htmlspecialchars($link),
-				        "created_time" => htmlspecialchars($created_time),
-				        "caption_username" => htmlspecialchars($caption_username),
-				        "caption_username_id" => htmlspecialchars($caption_username_id),        
-				        "standard_src" => htmlspecialchars($standard_src),
-				        "thumbnail_src" => htmlspecialchars($thumbnail_src),        
-				        "lat" => htmlspecialchars($lat),
-				        "lon" => htmlspecialchars($lon) // Consolidates variables to an array
-			        );
-			    }
-			       
-			    // First we grab any current images to ensure we don't add duplicates
-			    
-			    $image_id_array = array();
-			    
-				$attachments = get_posts( array(
-					'post_type' => 'attachment',
-					'post_mime_type' => 'image',
+				// grab current tweet IDs
+				
+				$existing_instagrams = get_posts( array(
+					'post_type' => 'wpgip_instagrams',
 					'posts_per_page' => -1,
 					'post_parent' => 0
 				) );
 			
-				if ( $attachments ) {
-					foreach ( $attachments as $attachment ) {
-						$post_meta = get_post_meta ( $attachment->ID );
-						$current_images[] = array ( 'post_data' => $attachment, 'post_meta' => $post_meta );
-						$image_id_array[] = $post_meta['cz_instagram_image_id'][0]; // makes finding duplicate items easier, but should be a better way!
+				if ( $existing_instagrams ) {
+					foreach ( $existing_instagrams as $existing_instagram ) {
+						$existing_instagram_post_id = get_post_meta ( $existing_instagram->ID, 'wpgip_ip_image_id', true );
+						if ( $existing_instagram_post_id ) { $existing_instagram_post_id_array[] = $existing_instagram_post_id; }
 					}
-					
 				}
+				
+//				print_r ($body); exit;
+			    
+			    foreach ( $body->data as $item ) { // go through the returned results
+			    
+					if ( !in_array( $item->id, $existing_instagram_post_id_array ) ) { // if we don't already have this tweet, and we don't want retweets
+			    			
+					    $instagram_id = $item->id;
 			
-				// Ok, now loop through the images grabbed and save into WP anything that we don't have
+				        $title = (isset($item->caption))?mb_substr($item->caption->text,0,70,"utf8"):null;
+				        
+				        $link = $item->link;
+				        $created_time = $item->created_time;
+				        $standard_src = $item->images->standard_resolution->url; 
+				        $thumbnail_src = $item->images->thumbnail->url; 
+				
+				        // get caption / username
+				        $caption_username = (isset($item->caption->from->username))?$item->caption->from->username:null; 
+				        $caption_username_id = (isset($item->caption->from->id))?$item->caption->from->id:null; 
+				
+				        // Location coords seemed empty in the results but you would need to check them as mostly be undefined
+				        $lat = (isset($item->data->location->latitude))?$item->data->location->latitude:null; 
+				        $lon = (isset($item->data->location->longtitude))?$item->data->location->longtitude:null; 
+				
+				        $new_instagrams[] = array(
+					        "instagram_id" => $instagram_id,
+					        "title" => htmlspecialchars($title),
+					        "link" => htmlspecialchars($link),
+					        "created_time" => htmlspecialchars($created_time),
+					        "caption_username" => htmlspecialchars($caption_username),
+					        "caption_username_id" => htmlspecialchars($caption_username_id),        
+					        "standard_src" => htmlspecialchars($standard_src),
+					        "thumbnail_src" => htmlspecialchars($thumbnail_src),        
+					        "lat" => htmlspecialchars($lat),
+					        "lon" => htmlspecialchars($lon)
+				        );
+			        
+			        }
+			    }
+			       
+			
+				//
+				// Ok, now loop through the $new_instagrams array and save them as WP posts
+				//
 					
-				foreach ($images as $image) {
+				if ( $new_instagrams ) {
+
+					foreach ($new_instagrams as $new_instagram) {
+					
+						$featured_image_done_yet = false;
+					
+						// Let's define the post title
 						
-					if ( !in_array($image['instagram_id'], $image_id_array) ) { 
-						
-						// image doesn't exist - let's upload and add to WP media lib
-						
-						$url = $image['standard_src'];
-						$tmp = download_url( $url );
-						$file_array = array(
-						    'name' => basename( $url ),
-						    'tmp_name' => $tmp
+						$post_title = wp_strip_all_tags($new_instagram['title']);
+					
+						// Create post object
+						$tweet_post = array(
+						  'post_title'    	=> $post_title,
+						  'post_content'  	=> wp_strip_all_tags ( $new_instagram['title'] ),
+						  'post_date'		=> date('Y-m-d H:i:s', $new_instagram['created_time'] ),
+						  'post_type'	  	=> 'wpgip_instagrams',
+						  'post_status'   	=> 'publish',
+						  'ping_status'	  	=> 'closed',
+						  'comment_status'	=> 'closed'
 						);
+						
+						// Insert the post into the database
+						$post_id = wp_insert_post( $tweet_post );
+						
+						if ( $post_id ) {
+						
+							// grab image and attach it to the post
+							
+							$url = $new_instagram['standard_src'];
+							$tmp = download_url( $url );
+							$file_array = array(
+							    'name' => basename( $url ),
+							    'tmp_name' => $tmp
+							);
+																	
+							// Check for download errors
+							if ( is_wp_error( $tmp ) ) {
+							    @unlink( $file_array[ 'tmp_name' ] );
+								print_r ("error: " . $tmp); die();
+							}
+							
+							$attachment_id = $this->wpgip_media_handle_sideload( $file_array, $post_id ); // the $post_id makes this attachment associated with the tweet post
+							
+							// Check for handle sideload errors.
+							
+							if ( is_wp_error( $attachment_id ) ) {
+							
+							    @unlink( $file_array['tmp_name'] );
+								print_r ("error: " . $attachment_id); die();
+							
+							} else {
+								
+								// no errors? Woot.
+								
+								if ( !$featured_image_done_yet ) { // make the image the featured image, if there isn't one already
 									
-						// Check for download errors
-						if ( is_wp_error( $tmp ) ) {
-						    @unlink( $file_array[ 'tmp_name' ] );
-							print_r ($tmp); echo "test";
+									set_post_thumbnail( $post_id, $attachment_id );
+									$featured_image_done_yet = true;
+									
+								}
+								
+							}
+							
+							// add metadata
+
+							if ( $new_instagram['instagram_id'] ) { add_post_meta($post_id, 'wpgip_ip_image_id', $new_instagram['instagram_id'], true); }			
+							if ( $new_instagram['lat'] ) { add_post_meta($post_id, 'wpgip_ip_lat', $new_instagram['lat'], true); }			
+							if ( $new_instagram['long'] ) { add_post_meta($post_id, 'wpgip_ip_long', $new_instagram['long'], true); }
+							if ( $new_instagram['link'] ) { add_post_meta($post_id, 'wpgip_ip_url', $new_instagram['link'], true); }
+							if ( $new_instagram['caption_username'] ) { add_post_meta($post_id, 'wpgip_ip_username', $new_instagram['caption_username'], true); }
+							if ( $new_instagram['caption_username_id'] ) { add_post_meta($post_id, 'wpgip_ip_username_id', $new_instagram['caption_username_id'], true); }
+							if ( $new_instagram['created_time'] ) { add_post_meta($post_id, 'wpgip_ip_datetime', $new_instagram['created_time'], true); }
+							
+						
+						
 						}
-												
-						$id = $this->wpgip_media_handle_sideload( $file_array, 0 );
 						
-						// Check for handle sideload errors.
-						if ( is_wp_error( $id ) ) {
-							print_r ($id); echo "test";
-						    @unlink( $file_array['tmp_name'] );
-						    return $id;
-						}
 						
-						$attachment_url = wp_get_attachment_url( $id );
-						
-						// add image title (which was the instagram's caption)
-						
-						$post_content = '<a href="'.$image['link'].'">Taken on ' . date('F jS, Y - g:ia', $image['created_time']);
-						
-						if ( $image['caption_username'] ) {
-							$post_content .= ' by '.$image['caption_username'].' ';	
-						} 
-						
-						$post_content .= '</a>.';
-						
-						$data = array(
-							'ID' => $id,
-						    'post_excerpt' => $image['title'],
-						    'post_content' => $post_content,
-						    'post_title' => $image['title']
-						);
-						
-						wp_update_post( $data );
 			
-						// add image metadata
-			
-						add_post_meta($id, 'cz_instagram_image_type', 'cz_gallery_image', true);
-						add_post_meta($id, 'cz_instagram_image_id', $image['instagram_id'], true);
-						if ( $image['lat'] ) { add_post_meta($id, 'cz_instagram_image_lat', $image['lat'], true); }			
-						if ( $image['lat'] ) { add_post_meta($id, 'cz_instagram_image_lat', $image['lat'], true); }
-						if ( $image['link'] ) { add_post_meta($id, 'cz_instagram_image_link', $image['link'], true); }
-						if ( $image['caption_username'] ) { add_post_meta($id, 'cz_instagram_image_caption_username', $image['caption_username'], true); }
-						if ( $image['caption_username_id'] ) { add_post_meta($id, 'cz_instagram_image_caption_username_id', $image['caption_username_id'], true); }
+
 						
 						// ok, add one to the counter
 						
@@ -554,12 +833,17 @@ class WPGrabInstagramPics {
 									
 					}
 					
-				}
+				} // if $new_instagrams
 				
 			
 			    $msg = "$image_counter images pulled from Instagram.";
 			    
-			}
+			} else {
+					
+					print_r ($response);
+					die();
+					
+				}
 
 		} else { // if we don't have a tag and client id
 		
