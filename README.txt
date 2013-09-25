@@ -20,6 +20,10 @@ You'll need a Instagram "Key" from their developer site.
 
 == Changelog ==
 
+= 0.4 =
+* standalone_cron.php added for real-time cron jobs
+* Significant cleanup of plugin code
+
 = 0.3 =
 * Significant changes to how plugin now works: instead of importing photos directly to the media gallery, we are using custom post types that store the metadata.
 * Better process for detecting new Instagram posts via the API

@@ -2,8 +2,8 @@
 /*
 Plugin Name: Grab Instagram Pics
 Plugin URI: http://www.davidbisset.com/wp-grab-instagram-pics
-Description: This plugin will search through recent Instagram posts (containing a certain hashtag), and import those photos along with metadata into WP's media gallery.
-Version: 0.1
+Description: This plugin will search through recent Instagram posts (containing a certain hashtag), and import those photos along with metadata into a custom post type.
+Version: 0.3
 Author: David Bisset
 Author URI: http://www.davidbisset.com
 Author Email: dbisset@dimensionmedia.com
@@ -72,7 +72,7 @@ class WPGrabInstagramPics {
 		/**
 		 * Define globals
 		 */
-    	define("WP_GRAB_INSTAGRAM_PICS_PERMISSIONS", "manage_options");
+    		if ( ! defined('WP_GRAB_INSTAGRAM_PICS_PERMISSIONS') ) define("WP_GRAB_INSTAGRAM_PICS_PERMISSIONS", "manage_options");
 
 		/**
 		 * Load plugin text domain
@@ -205,14 +205,14 @@ class WPGrabInstagramPics {
 	 * Registers and enqueues wpgip-specific styles.
 	 */
 	public function register_wpgip_styles() {
-		wp_enqueue_style( 'wpgip-name-wpgip-styles', plugins_url( 'css/display.css', __FILE__ ) );
+		// wp_enqueue_style( 'wpgip-name-wpgip-styles', plugins_url( 'css/display.css', __FILE__ ) );
 	} // end register_wpgip_styles
 
 	/**
 	 * Registers and enqueues wpgip-specific scripts.
 	 */
 	public function register_wpgip_scripts() {
-		wp_enqueue_script( 'wpgip-name-wpgip-script', plugins_url( 'js/display.js', __FILE__ ), array( 'jquery' ) );
+		// wp_enqueue_script( 'wpgip-name-wpgip-script', plugins_url( 'js/display.js', __FILE__ ), array( 'jquery' ) );
 	} // end register_wpgip_scripts
 
 	/**
@@ -413,7 +413,7 @@ class WPGrabInstagramPics {
 	        'show_in_menu' => true,
 	        'show_in_nav_menus' => false,
 	        'publicly_queryable' => true,
-	        'exclude_from_search' => true,
+	        'exclude_from_search' => false,
 	        'has_archive' => false,
 	        'query_var' => true,
 	        'can_export' => true,
@@ -453,6 +453,15 @@ class WPGrabInstagramPics {
 		$wpgip_ip_username = get_post_meta($post->ID, 'wpgip_ip_username', true);
 		$wpgip_ip_username_id = get_post_meta($post->ID, 'wpgip_ip_username_id', true);
 		$wpgip_ip_datetime = get_post_meta($post->ID, 'wpgip_ip_datetime', true);
+		
+		// adding for "new" Instagram video
+		$wpgip_ip_video_expanded_url = get_post_meta($post->ID, 'wpgip_ip_video_expanded_url', true);
+		$wpgip_ip_video_width = get_post_meta($post->ID, 'wpgip_ip_video_width', true);
+		$wpgip_ip_video_height = get_post_meta($post->ID, 'wpgip_ip_video_height', true);
+		$wpgip_ip_video_type = get_post_meta($post->ID, 'wpgip_ip_video_type', true);
+		$wpgip_ip_video_image = get_post_meta($post->ID, 'wpgip_ip_video_image', true);
+		$wpgip_ip_video_info = get_post_meta($post->ID, 'wpgip_ip_video_info', true);
+
 				
 		// Echo out the fields
 		echo '<label>Image ID:</label> <input type="text" name="wpgip_ip_image_id" value="' . $wpgip_ip_image_id  . '" class="widefat" />';
@@ -462,6 +471,18 @@ class WPGrabInstagramPics {
 		echo '<label>Username:</label> <input type="text" name="wpgip_ip_username" value="' . $wpgip_ip_username  . '" class="widefat" />';		
 		echo '<label>Username ID:</label> <input type="text" name="wpgip_ip_username_id" value="' . $wpgip_ip_username_id  . '" class="widefat" />';
 		echo '<label>Datetime:</label> <input type="text" name="wpgip_ip_datetime" value="' . $wpgip_ip_datetime  . '" class="widefat" />';
+		
+		echo '<br/>';
+		echo '<label>Video URL:</label> <input type="text" name="wpgip_ip_video_expanded_url" value="' . $wpgip_ip_video_expanded_url  . '" class="widefat" />';
+		echo '<label>Video Width (pixels):</label> <input type="text" name="wpgip_ip_video_width" value="' . $wpgip_ip_video_width  . '" class="widefat" />';
+		echo '<label>Video Height (pixels):</label> <input type="text" name="wpgip_ip_video_height" value="' . $wpgip_ip_video_height  . '" class="widefat" />';
+
+		echo '<label>Video Type:</label> <input type="text" name="wpgip_ip_video_type" value="' . $wpgip_ip_video_type  . '" class="widefat" />';
+		echo '<label>Video Image (Thumbnail):</label> <input type="text" name="wpgip_ip_video_image" value="' . $wpgip_ip_video_image  . '" class="widefat" />';
+		echo '<label>Video Info:</label> <input type="text" name="wpgip_ip_video_info" value="' . $wpgip_ip_video_info  . '" class="widefat" />';
+
+
+
 	}
 
 
@@ -496,6 +517,10 @@ class WPGrabInstagramPics {
 			$tweets_meta['wpgip_ip_username'] = $_POST['wpgip_ip_username'];
 			$tweets_meta['wpgip_ip_username_id'] = $_POST['wpgip_ip_username_id'];
 			$tweets_meta['wpgip_ip_datetime'] = $_POST['wpgip_ip_datetime'];
+			$tweets_meta['wpgip_ip_video_expanded_url'] = $_POST['wpgtp_tw_video_expanded_url'];
+			$tweets_meta['wpgip_ip_video_type'] = $_POST['wpgip_ip_video_type'];
+			$tweets_meta['wpgip_ip_video_image'] = $_POST['wpgip_ip_video_image'];
+			$tweets_meta['wpgip_ip_video_info'] = $_POST['wpgip_ip_video_info'];
 			
 			// Add values of $events_meta as custom fields
 			
@@ -648,11 +673,12 @@ class WPGrabInstagramPics {
 
     } // end wpgip_clear_settings
     
+
+	 
+	 
 	/*
-	 * wpgip_grab_instagram_posts() is the bulk of the plugin. It interacts with the instagram API to parse through posts via the
-	 * hashtag, find images, and save those images (along with metadata) as a WordPress media item
-	 *
-	 * NOTICE: This is a work in progress with instagram's API. Trying to mediate how to do this better.
+	 * wpgip_grab_instagram_posts() wraps around wpgip_do_grab_instagram_posts() and handles security when
+	 * the grabbing is called manually via the WordPress backend on the grab page
 	 */
 	
 	public function wpgip_grab_instagram_posts() {
@@ -660,7 +686,30 @@ class WPGrabInstagramPics {
 		// check nonce
         if ( ! wp_verify_nonce( $_POST[ 'wp-grab-instagram-pics' . '_nonce' ], 'grab_instagrams' ) )
             die( 'Invalid nonce.' . var_export( $_POST, true ) );
-            
+                        
+        // since nonce checks out, call the main function
+        
+       $msg = $this->wpgip_do_grab_instagram_posts();
+       
+	$url = add_query_arg( 'msg', $msg, urldecode( $_POST['_wp_http_referer'] ) );
+
+       wp_safe_redirect( $url );
+       exit;
+
+
+        
+    }
+    
+    
+	/*
+	 * wpgip_do_grab_instagram_posts() is the bulk of the plugin. It interacts with the instagram API to parse through posts via the
+	 * hashtag, find images, and save those images (along with metadata) as a WordPress media item
+	 *
+	 * NOTICE: This is a work in progress with instagram's API. Trying to mediate how to do this better.
+	 */  
+    
+	public function wpgip_do_grab_instagram_posts() {
+           
         // proceeding forward - woot!
         
         // let's grab the hashtag, henceforth known as the "tag"
@@ -673,41 +722,27 @@ class WPGrabInstagramPics {
 	    $msg = '';
 	    $new_instagrams = array();
 	    $image_counter = 0;
+	    $existing_instagram_post_id_array = array();
 	    
 	    if ( $tag && $client_id ) { // need a tag to search, and a client id to proceed
 	    
 		    // let's go grab some instagram posts!
-   		    $response = wp_remote_get( 'https://api.instagram.com/v1/tags/' . $tag . '/media/recent?client_id=' . $client_id, array( 'sslverify' => false ) );
+   		    $response = wp_remote_get( 'https://api.instagram.com/v1/tags/' . urlencode($tag) . '/media/recent?client_id=' . $client_id, array( 'sslverify' => false ) );
 		    	           
 			if ( 200 === wp_remote_retrieve_response_code( $response ) ) {
-				
-				// let's update the "last tried" field so someone knows when we last attempted to look
-				update_option( 'wpgip_instagram_last_grab', time() );
-					
+			
+				// let's determine when the last time we looked for instagram posts
+				$last_check_date = get_option( 'wpgip_instagram_last_grab', 0 );
+									
 			    // Decode the response and build an array
 			    $body = json_decode( wp_remote_retrieve_body( $response ) );
 			    
-				// grab current tweet IDs
-				
-				$existing_instagrams = get_posts( array(
-					'post_type' => 'wpgip_instagrams',
-					'posts_per_page' => -1,
-					'post_parent' => 0
-				) );
-			
-				if ( $existing_instagrams ) {
-					foreach ( $existing_instagrams as $existing_instagram ) {
-						$existing_instagram_post_id = get_post_meta ( $existing_instagram->ID, 'wpgip_ip_image_id', true );
-						if ( $existing_instagram_post_id ) { $existing_instagram_post_id_array[] = $existing_instagram_post_id; }
-					}
-				}
-				
-//				print_r ($body); exit;
-			    
+
+
 			    foreach ( $body->data as $item ) { // go through the returned results
 			    
-					if ( !in_array( $item->id, $existing_instagram_post_id_array ) ) { // if we don't already have this tweet, and we don't want retweets
-			    			
+					if ( $item->created_time > $last_check_date ) { // if we don't already have this tweet, and we don't want retweets
+								    			
 					    $instagram_id = $item->id;
 			
 				        $title = (isset($item->caption))?mb_substr($item->caption->text,0,70,"utf8"):null;
@@ -724,6 +759,15 @@ class WPGrabInstagramPics {
 				        // Location coords seemed empty in the results but you would need to check them as mostly be undefined
 				        $lat = (isset($item->data->location->latitude))?$item->data->location->latitude:null; 
 				        $lon = (isset($item->data->location->longtitude))?$item->data->location->longtitude:null; 
+				        
+				        // is there a video w/ this instagram (new as of July 2013) - if so, throw that in
+				        if ( !empty($item->videos) ) {
+					        $video_url = $item->videos->standard_resolution->url;
+					        $video_width = $item->videos->standard_resolution->width; // might not need this
+					        $video_height = $item->videos->standard_resolution->height; // might not need this
+				        } else {
+					        $video_url = $video_width = $video_height = false;
+				        }
 				
 				        $new_instagrams[] = array(
 					        "instagram_id" => $instagram_id,
@@ -735,12 +779,21 @@ class WPGrabInstagramPics {
 					        "standard_src" => htmlspecialchars($standard_src),
 					        "thumbnail_src" => htmlspecialchars($thumbnail_src),        
 					        "lat" => htmlspecialchars($lat),
-					        "lon" => htmlspecialchars($lon)
+					        "lon" => htmlspecialchars($lon),
+					        "video_url" => $video_url,
+					        "video_width" => $video_width,
+					        "video_height" => $video_height					        
 				        );
 			        
 			        }
 			    }
+			    
+				// let's update the "last tried" field so someone knows when we last attempted to look
+				
+				update_option( 'wpgip_instagram_last_grab', time() );
 			       
+			
+//				print_r ($new_instagrams); exit;
 			
 				//
 				// Ok, now loop through the $new_instagrams array and save them as WP posts
@@ -763,9 +816,8 @@ class WPGrabInstagramPics {
 						  'post_date'		=> date('Y-m-d H:i:s', $new_instagram['created_time'] ),
 						  'post_type'	  	=> 'wpgip_instagrams',
 						  'post_status'   	=> 'publish',
-						  'ping_status'	  	=> 'closed',
-						  'comment_status'	=> 'closed'
-						);
+						  'ping_status'	  	=> 'closed'
+  						);
 						
 						// Insert the post into the database
 						$post_id = wp_insert_post( $tweet_post );
@@ -813,24 +865,20 @@ class WPGrabInstagramPics {
 
 							if ( $new_instagram['instagram_id'] ) { add_post_meta($post_id, 'wpgip_ip_image_id', $new_instagram['instagram_id'], true); }			
 							if ( $new_instagram['lat'] ) { add_post_meta($post_id, 'wpgip_ip_lat', $new_instagram['lat'], true); }			
-							if ( $new_instagram['long'] ) { add_post_meta($post_id, 'wpgip_ip_long', $new_instagram['long'], true); }
+							if ( $new_instagram['lon'] ) { add_post_meta($post_id, 'wpgip_ip_long', $new_instagram['long'], true); }
 							if ( $new_instagram['link'] ) { add_post_meta($post_id, 'wpgip_ip_url', $new_instagram['link'], true); }
 							if ( $new_instagram['caption_username'] ) { add_post_meta($post_id, 'wpgip_ip_username', $new_instagram['caption_username'], true); }
 							if ( $new_instagram['caption_username_id'] ) { add_post_meta($post_id, 'wpgip_ip_username_id', $new_instagram['caption_username_id'], true); }
 							if ( $new_instagram['created_time'] ) { add_post_meta($post_id, 'wpgip_ip_datetime', $new_instagram['created_time'], true); }
 							
-						
-						
+							if ( $new_instagram['video_url'] ) { add_post_meta($post_id, 'wpgip_ip_video_expanded_url', $new_instagram['video_url'], true); }
+							if ( $new_instagram['video_width'] ) { add_post_meta($post_id, 'wpgip_ip_video_width', $new_instagram['video_width'], true); }
+							if ( $new_instagram['video_height'] ) { add_post_meta($post_id, 'wpgip_ip_video_height', $new_instagram['video_height'], true); }
+							
 						}
 						
-						
-			
-
-						
 						// ok, add one to the counter
-						
 						$image_counter++;
-									
 					}
 					
 				} // if $new_instagrams
@@ -838,13 +886,7 @@ class WPGrabInstagramPics {
 			
 			    $msg = "$image_counter images pulled from Instagram.";
 			    
-			} else {
-					
-					print_r ($response);
-					die();
-					
-				}
-
+			} 
 		} else { // if we don't have a tag and client id
 		
 			if ( !$tag ) {
@@ -855,12 +897,7 @@ class WPGrabInstagramPics {
 					
 		}
 
-		$url = add_query_arg( 'msg', $msg, urldecode( $_POST['_wp_http_referer'] ) );
-
-        wp_safe_redirect( $url );
-        exit;
-
-
+		return $msg;
 	} // end wpgip_grab_instagram_posts()
 	
 		
